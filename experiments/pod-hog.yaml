@@ -1,13 +1,13 @@
 kind: Workflow
 apiVersion: argoproj.io/v1alpha1
 metadata:
-  name: pod-delete
+  name: pod-hog
   namespace: litmus
   labels:
     infra_id: ae4788b7-f439-48bc-ac2f-ebc2f835a439
-    revision_id: 262c2212-99f3-4f27-98cb-e4253c82052d
+    revision_id: 53923594-28fd-410f-a288-3bd9ba4096cc
     subject: "kube-proxy"
-    workflow_id: a8c25f49-c18c-43de-9e6e-abd7b2df4f8b
+    workflow_id: b6b96288-01df-42cd-ac65-5269beb14ca4
     workflows.argoproj.io/controller-instanceid: ae4788b7-f439-48bc-ac2f-ebc2f835a439
 spec:
   templates:
@@ -29,34 +29,31 @@ spec:
       inputs:
         artifacts:
           - name: install-chaos-faults
-            path: /tmp/pod-delete.yaml
+            path: /tmp/pod-cpu-hog.yaml
             raw:
               data: >
                 apiVersion: litmuschaos.io/v1alpha1
 
                 description:
                   message: |
-                    Deletes a pod belonging to a deployment/statefulset/daemonset
+                    Injects cpu consumption on pods belonging to an app deployment
                 kind: ChaosExperiment
 
                 metadata:
-                  name: pod-delete
+                  name: pod-cpu-hog
                 spec:
                   definition:
                     scope: Namespaced
                     permissions:
                       - apiGroups:
                           - ""
-                          - "apps"
                           - "batch"
                           - "litmuschaos.io"
                         resources:
-                          - "deployments"
                           - "jobs"
                           - "pods"
                           - "pods/log"
                           - "events"
-                          - "configmaps"
                           - "chaosengines"
                           - "chaosexperiments"
                           - "chaosresults"
@@ -67,41 +64,37 @@ spec:
                           - "patch"
                           - "update"
                           - "delete"
-                      - apiGroups:
-                          - ""
-                        resources:
-                          - "nodes"
-                        verbs:
-                          - "get"
-                          - "list"
                     image: "litmuschaos.docker.scarf.sh/litmuschaos/go-runner:3.8.0"
                     imagePullPolicy: Always
                     args:
                     - -c
-                    - ./experiments -name pod-delete
+                    - ./experiments -name pod-cpu-hog
                     command:
                     - /bin/bash
                     env:
-
                     - name: TOTAL_CHAOS_DURATION
-                      value: '15'
+                      value: '30'
 
-                    # Period to wait before and after injection of chaos in sec
+                    - name: CHAOS_INTERVAL
+                      value: '10'
+
+                    ## Number of CPU cores to stress
+                    - name: CPU_CORES
+                      value: '1'
+
+                    ## Percentage of total pods to target
+                    - name: PODS_AFFECTED_PERC
+                      value: ''
+
+                    ## Period to wait before and after injection of chaos in sec
                     - name: RAMP_TIME
                       value: ''
 
-                    # provide the kill count
-                    - name: KILL_COUNT
-                      value: '1'
-
-                    - name: FORCE
-                      value: 'true'
-
-                    - name: CHAOS_INTERVAL
-                      value: '15'
+                    - name: TARGET_POD
+                      value: ''
 
                     labels:
-                      name: pod-delete
+                      name: pod-cpu-hog
       outputs: {}
       metadata: {}
       container:
@@ -111,7 +104,7 @@ spec:
           - sh
           - -c
         args:
-          - kubectl apply -f /tmp/pod-delete.yaml -n
+          - kubectl apply -f /tmp/pod-cpu-hog.yaml -n
             {{workflow.parameters.adminModeNamespace}}
         resources: {}
     - name: run-chaos
@@ -120,15 +113,17 @@ spec:
           - name: run-chaos
             path: /tmp/chaosengine-run-chaos.yaml
             raw:
-              data: |
+              data: >
                 apiVersion: litmuschaos.io/v1alpha1
+
                 kind: ChaosEngine
+
                 metadata:
                   namespace: "{{workflow.parameters.adminModeNamespace}}"
                   labels:
                     context: "kube-proxy"
                     workflow_run_id: "{{ workflow.uid }}"
-                    workflow_name: pod-delete
+                    workflow_name: pod-hog
                   annotations:
                     probeRef: '[{"name":"probe","mode":"SOT"}]'
                   generateName: run-chaos
@@ -141,16 +136,22 @@ spec:
                   engineState: active
                   chaosServiceAccount: litmus-admin
                   experiments:
-                    - name: pod-delete
+                    - name: pod-cpu-hog
                       spec:
                         components:
                           env:
+                            - name: TARGET_CONTAINER
+                              value: store-front
+                            - name: CPU_CORES
+                              value: "1"
                             - name: TOTAL_CHAOS_DURATION
-                              value: "15"
-                            - name: CHAOS_INTERVAL
-                              value: "10"
-                            - name: FORCE
-                              value: "false"
+                              value: "60"
+                            - name: CHAOS_KILL_COMMAND
+                              value: >-
+                                kill -9 $(ps afx | grep "[md5sum] /dev/zero" | awk '{print$1}' |
+                                tr '
+
+                                ' ' ')
       outputs: {}
       metadata:
         labels:

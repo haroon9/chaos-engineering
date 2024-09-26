@@ -29,10 +29,10 @@ spec:
           value: "http://product-service:3002/"
         resources:
           requests:
-            cpu: 1m
-            memory: 200Mi
+            cpu: 50m
+            memory: 256Mi
           limits:
-            cpu: 1000m
+            cpu: 500m
             memory: 512Mi
         startupProbe:
           httpGet:

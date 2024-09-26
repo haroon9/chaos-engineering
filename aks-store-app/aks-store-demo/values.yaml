@@ -14,8 +14,8 @@ managedIdentityName: "" # name of the Azure AD identity to use for the service a
 managedIdentityClientId: "" # client ID of the managed identity to use for the service account
 
 hpa:
-  enabled: false
-  minReplicas: 1
+  enabled: true
+  minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 85
   targetMemoryUtilizationPercentage: 90
