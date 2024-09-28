@@ -24,6 +24,6 @@ jobs:
           use-kubelogin: 'true'
       - name: Run chaos
         run: |
-          kubectl delete workflow pod-delete -n litmus
-          kubectl delete workflow pod-hog -n litmus
-          kubectl apply -f ./chaos-engineering/experiments/pod-delete.yaml
+          kubectl delete workflow pod-delete -n litmus || true
+          kubectl delete workflow pod-hog -n litmus || true
+          kubectl apply -f ./experiments/pod-delete.yml
