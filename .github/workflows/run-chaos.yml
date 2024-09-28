@@ -7,6 +7,8 @@ jobs:
   run-chaos:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -26,4 +28,4 @@ jobs:
         run: |
           kubectl delete workflow pod-delete -n litmus || true
           kubectl delete workflow pod-hog -n litmus || true
-          kubectl apply -f ./experiments/pod-delete.yml
+          kubectl apply -f experiments/pod-delete.yml
